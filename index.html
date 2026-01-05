@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Muziek met meester Luis</title>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --border:rgba(15,23,42,.10);
+      --shadow:0 16px 40px rgba(0,0,0,.10);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:#fff;
+      color:var(--ink);
+      min-height:100vh;
+    }
+    header{
+      position:sticky; top:0; z-index:50;
+      background:rgba(255,255,255,.92);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--border);
+    }
+    .wrap{max-width:1200px; margin:0 auto; padding:18px 16px;}
+    .titleRow{
+      display:flex; gap:12px; align-items:center; justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    h1{
+      margin:0;
+      font-size:28px;
+      font-weight:950;
+      letter-spacing:.2px;
+      line-height:1.05;
+    }
+
+    /* Teacher button */
+    .teacherBtn{
+      height:42px;
+      padding:0 14px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:#fff;
+      font-weight:950;
+      cursor:pointer;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .teacherBtn.on{
+      border-color:rgba(239,68,68,.35);
+      box-shadow:0 10px 22px rgba(239,68,68,.12);
+    }
+
+    main .wrap{ padding-top:16px; padding-bottom:70px; }
+
+    /* GRID */
+    .grid{
+      display:grid;
+      gap:14px;
+      align-items:stretch;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 720px){
+      .grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (min-width: 980px){
+      .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    .card{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:0 10px 26px rgba(0,0,0,.08);
+      padding:16px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:150px;
+      cursor:pointer;
+      user-select:none;
+      transition:transform .06s ease;
+    }
+    .card:active{ transform:scale(.99); }
+
+    .card h2{
+      margin:0;
+      font-size:20px;
+      font-weight:950;
+      letter-spacing:.2px;
+    }
+    .desc{
+      margin:0;
+      color:var(--muted);
+      font-weight:650;
+      line-height:1.25;
+      font-size:14px;
+      flex:1;
+    }
+
+    /* Modal */
+    .modal{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      z-index:999;
+    }
+    .modal.show{ display:block; }
+    .modalBox{
+      position:absolute; inset:14px;
+      background:#fff;
+      border-radius:18px;
+      overflow:hidden;
+      box-shadow:var(--shadow);
+      display:flex;
+      flex-direction:column;
+    }
+    .modalBar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px;
+      border-bottom:1px solid var(--border);
+      background:#fff;
+    }
+    .modalTitle{
+      font-weight:950;
+      font-size:14px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      flex:1;
+    }
+    .modalBtns{ display:flex; gap:8px; }
+    .btn{
+      height:42px;
+      padding:0 14px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:#fff;
+      font-weight:950;
+      cursor:pointer;
+      user-select:none;
+    }
+    .btn.hidden{ display:none; }
+
+    iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      background:#fff;
+    }
+
+    /* Footer */
+    .sig{
+      position:fixed;
+      right:14px;
+      bottom:12px;
+      font-size:12px;
+      font-weight:900;
+      color:rgba(15,23,42,.55);
+      user-select:none;
+      pointer-events:none;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="titleRow">
+      <h1>Muziek met meester Luis</h1>
+      <button class="teacherBtn" id="teacherBtn">Teacher</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+</main>
+
+<!-- Project modal -->
+<div class="modal" id="modal">
+  <div class="modalBox">
+    <div class="modalBar">
+      <div class="modalTitle" id="modalTitle">Project</div>
+      <div class="modalBtns">
+        <button class="btn hidden" id="openNewTab">Nieuw tabblad</button>
+        <button class="btn" id="closeModal">Sluiten</button>
+      </div>
+    </div>
+    <iframe id="frame"></iframe>
+  </div>
+</div>
+
+<div class="sig">Muziek met meester Luis 2026</div>
+
+<script>
+  const PROJECTS = [
+    { title: "Kennis Battle", desc: "Wie weet het meeste over muziek", file: "projects/kennis battle.html" },
+    { title: "Beat Maker", desc: "Maak je eigen beats", file: "projects/beat maker_3.html" },
+    { title: "Easy Keyboard", desc: "Componeer je eigen melodieën", file: "projects/easy keyboard.html" },
+    { title: "Rhythm Battle", desc: "Kan jij strak in de maat ritmes spelen?", file: "projects/rhythm battle.html" },
+    { title: "Bassline", desc: "Drum and Bass", file: "projects/tb 303 machine_3.html" },
+     { title: "Song Maker", desc: "Maak je eigen liedjes", file: "projects/song maker.html" },
+    { title: "Boomwhackers", desc: "Spelen en componeren met boomwhackers", file: "projects/boomwhackers.html" }
+  ];
+
+  const grid = document.getElementById('grid');
+  const modal = document.getElementById('modal');
+  const frame = document.getElementById('frame');
+  const modalTitle = document.getElementById('modalTitle');
+  const closeModal = document.getElementById('closeModal');
+  const openNewTab = document.getElementById('openNewTab');
+  const teacherBtn = document.getElementById('teacherBtn');
+
+  let teacherMode = false;
+  let currentFile = "";
+
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function render(){
+    grid.innerHTML = PROJECTS.map(p => `
+      <div class="card" data-file="${escapeHtml(p.file)}" data-title="${escapeHtml(p.title)}">
+        <h2>${escapeHtml(p.title)}</h2>
+        <p class="desc">${escapeHtml(p.desc)}</p>
+      </div>
+    `).join("");
+
+    grid.querySelectorAll('.card').forEach(card=>{
+      card.addEventListener('click', ()=>{
+        openInModal(card.dataset.file, card.dataset.title);
+      });
+    });
+  }
+
+  function setTeacherMode(on){
+    teacherMode = on;
+    teacherBtn.classList.toggle('on', on);
+    openNewTab.classList.toggle('hidden', !on);
+  }
+
+  function openInModal(file, title){
+    currentFile = file;
+    modalTitle.textContent = title;
+    frame.src = encodeURI(file);
+    modal.classList.add('show');
+  }
+
+  function closeProjectModal(){
+    modal.classList.remove('show');
+    frame.src = "";
+    currentFile = "";
+  }
+
+  teacherBtn.addEventListener('click', ()=>{
+    setTeacherMode(!teacherMode);
+  });
+
+  openNewTab.addEventListener('click', ()=>{
+    currentFile && window.open(encodeURI(currentFile), "_blank");
+  });
+
+  closeModal.addEventListener('click', closeProjectModal);
+  modal.addEventListener('click', e=> e.target === modal && closeProjectModal());
+  window.addEventListener('keydown', e=>{
+    if(e.key === "Escape") closeProjectModal();
+  });
+
+  setTeacherMode(false);
+  render();
+</script>
+
+</body>
+</html>
