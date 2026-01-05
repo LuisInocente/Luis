@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Kids Drum Machine</title>
+  <style>
+    :root{
+      --bg:#f2f7ff; --card:#fff; --border:#d9e2ff; --text:#1b1f2a; --muted:#5a647a; --accent:#4f7cff;
+      --gridBorder:#cfd7ee; --cellA:#fff; --cellB:#f3f6ff; --playhead: rgba(79,124,255,.35);
+      --t1:hsl(10 85% 72%); --t2:hsl(90 70% 72%); --t3:hsl(200 80% 72%); --t4:hsl(280 75% 76%); --t5:hsl(45 90% 72%);
+      --btnH:56px; --btnR:16px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;padding:18px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);display:flex;justify-content:center;user-select:none;-webkit-tap-highlight-color:transparent}
+    .wrap{width:min(1120px,100%)}
+    h1{margin:0 0 12px;font-size:22px;font-weight:950;letter-spacing:.2px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:14px;box-shadow:0 10px 30px rgba(15,25,60,.08)}
+    .topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .left,.right{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:999px;background:#fff;font-size:13px;color:var(--muted)}
+    .pill strong{color:var(--text);font-weight:950}
+    input[type="number"]{width:92px;padding:10px;border:1px solid var(--border);border-radius:12px;font-size:16px;outline:none;color:var(--text);font-weight:900}
+    input[type="range"]{width:180px;accent-color:var(--accent)}
+    button{border:1px solid var(--border);background:#fff;height:var(--btnH);padding:0 16px;border-radius:var(--btnR);cursor:pointer;font-weight:950;font-size:16px;white-space:nowrap}
+    button.primary{background:var(--accent);color:#fff;border-color:transparent}
+    button.small{height:40px;padding:0 12px;font-size:13px;border-radius:12px;font-weight:900}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .status{margin-top:6px;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+    .gridWrap{border:1px solid var(--gridBorder);border-radius:16px;overflow:hidden;background:#fff}
+    .headerRow{display:grid;grid-template-columns: 320px repeat(16, 1fr);border-bottom:1px solid var(--gridBorder);background:#fff}
+    .headerCell{padding:10px 8px;font-size:11px;color:var(--muted);text-align:center;border-left:1px solid var(--gridBorder);font-weight:900}
+    .headerCell:first-child{text-align:left;border-left:none;padding-left:12px}
+    .row{display:grid;grid-template-columns: 320px repeat(16, 1fr)}
+    .row + .row{border-top:1px solid var(--gridBorder)}
+    .trackCell{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-right:1px solid var(--gridBorder);background:#fff}
+    .trackLeft{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto}
+    .swatch{width:16px;height:16px;border-radius:999px;border:1px solid rgba(0,0,0,.12);flex:0 0 auto}
+    .trackText{display:flex;flex-direction:column;min-width:0;gap:2px}
+    .trackName{font-weight:1000;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;line-height:1.1}
+    .fileLabel{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+    .mini{display:flex;gap:8px;align-items:center;flex:0 0 auto}
+    .mini button{height:44px;padding:0 12px;border-radius:12px;font-size:14px;font-weight:950}
+
+    .cell{height:52px;border-left:1px solid var(--gridBorder);display:flex;align-items:center;justify-content:center;background:var(--cellA);cursor:pointer;touch-action:manipulation}
+    .cell.alt{background:var(--cellB)}
+    .cell.playhead{outline:5px solid var(--playhead);outline-offset:-5px}
+    .cell.on.t1{background:var(--t1)} .cell.on.t2{background:var(--t2)} .cell.on.t3{background:var(--t3)} .cell.on.t4{background:var(--t4)} .cell.on.t5{background:var(--t5)}
+
+    .barLines{display:grid;grid-template-columns: 320px repeat(16, 1fr);pointer-events:none;position:relative;margin-top:-1px}
+    .barLines div{border-left:1px solid transparent;height:0}
+    .barLines .bar{border-left:2px solid rgba(159,181,255,.75)}
+
+    @media (max-width: 980px){
+      .headerRow, .row{ grid-template-columns: 260px repeat(16, 1fr); }
+      .barLines{ grid-template-columns: 260px repeat(16, 1fr); }
+      input[type="range"]{ width:150px; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Drum Machine</h1>
+
+  <div class="card">
+    <div class="topbar">
+      <div class="left">
+        <div class="pill">
+          <span>BPM</span>
+          <input id="bpm" type="number" value="120" min="40" max="220">
+        </div>
+        <button id="play" class="primary" disabled>Play</button>
+        <button id="stop" disabled>Stop</button>
+        <button id="clear">Clear</button>
+      </div>
+
+      <div class="right">
+        <div class="pill">
+          <span>Volume</span>
+          <input id="vol" type="range" min="0" max="1" value="0.9" step="0.01">
+          <strong id="volLabel">90%</strong>
+        </div>
+
+        <button id="reload" class="small">Reload sounds</button>
+        <div class="pill"><span id="saveState">Saved ✓</span></div>
+      </div>
+    </div>
+
+    <div class="status">
+      <div id="statusLeft"></div>
+    </div>
+
+    <div class="gridWrap">
+      <div class="headerRow" id="headerRow"></div>
+      <div id="grid"></div>
+      <div class="barLines" id="barLines"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">Muziek met meester Luis 2026</div>
+<script>
+(() => {
+  // ====== CONFIG: hosted samples folder ======
+  const SAMPLE_BASE = './samples/';    // map naast je HTML
+  const EXT_TRY = ['wav','mp3','ogg']; // probeert in deze volgorde
+  const STORAGE_KEY = 'kids_drum_machine_hosted_v2';
+
+  const bpmEl = document.getElementById('bpm');
+  const playBtn = document.getElementById('play');
+  const stopBtn = document.getElementById('stop');
+  const clearBtn = document.getElementById('clear');
+  const reloadBtn = document.getElementById('reload');
+
+  const statusLeft = document.getElementById('statusLeft');
+  const saveStateEl = document.getElementById('saveState');
+
+  const headerRow = document.getElementById('headerRow');
+  const gridEl = document.getElementById('grid');
+  const barLines = document.getElementById('barLines');
+
+  const volEl = document.getElementById('vol');
+  const volLabel = document.getElementById('volLabel');
+
+  const STEPS = 16;
+  const STEPS_PER_BEAT = 4;
+
+  // Lazy audio init
+  let ctx = null;
+  let master = null;
+
+  // Track active sources so Stop is real Stop
+  const activeSources = new Set();
+
+  const TRACKS_DEF = [
+    { name:'Kick',  key:'kick',  colorClass:'t1' },
+    { name:'Snare', key:'snare', colorClass:'t2' },
+    { name:'Hat',   key:'hat',   colorClass:'t3' },
+    { name:'Clap',  key:'clap',  colorClass:'t4' },
+    { name:'Perc',  key:'perc',  colorClass:'t5' },
+  ];
+
+  const tracks = TRACKS_DEF.map(t => ({
+    ...t,
+    fileLabel: 'Loading…',
+    buffer: null,
+    pattern: Array(STEPS).fill(false),
+  }));
+
+  // Scheduler
+  let isPlaying = false;
+  let step = 0;
+  let nextNoteTime = 0;
+  let schedulerTimer = null;
+  const LOOKAHEAD_MS = 25;
+  const SCHEDULE_AHEAD_SEC = 0.12;
+
+  // Visual playhead
+  let playStep = 0;
+  let startTime = 0;
+  let rafId = null;
+
+  function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
+  function bpm(){ return clamp(parseFloat(bpmEl.value || 120), 40, 220); }
+  function stepSec(){ return (60 / bpm()) / STEPS_PER_BEAT; }
+  function setStatus(t){ statusLeft.textContent = t; }
+  function anyLoaded(){ return tracks.some(t => !!t.buffer); }
+
+  function ensureAudio(){
+    if(ctx) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    ctx = new AudioCtx();
+
+    master = ctx.createGain();
+    master.gain.value = clamp(parseFloat(volEl.value || 0.9), 0, 1);
+    master.connect(ctx.destination);
+  }
+
+  async function resumeAudio(){
+    ensureAudio();
+    try{ await ctx.resume(); }catch(_){}
+  }
+
+  function cssColorForClass(cls){
+    const root = getComputedStyle(document.documentElement);
+    return root.getPropertyValue(`--${cls}`).trim() || root.getPropertyValue('--t5').trim();
+  }
+
+  // Autosave patterns/settings (not audio)
+  let saveTimer=null;
+  function markDirty(){
+    saveStateEl.textContent='Saving…';
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(saveNow,200);
+  }
+  function saveNow(){
+    const data = {
+      version: 1,
+      bpm: bpm(),
+      vol: clamp(parseFloat(volEl.value||0.9),0,1),
+      pattern: tracks.map(t => t.pattern),
+    };
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      saveStateEl.textContent='Saved ✓';
+    }catch(_){
+      saveStateEl.textContent='Save failed';
+    }
+  }
+  function loadSaved(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return;
+      const data = JSON.parse(raw);
+      if(!data || data.version!==1) return;
+      if(typeof data.bpm==='number') bpmEl.value = String(clamp(data.bpm,40,220));
+      if(typeof data.vol==='number') volEl.value = String(clamp(data.vol,0,1));
+      if(Array.isArray(data.pattern)){
+        for(let i=0;i<tracks.length;i++){
+          const p = data.pattern[i];
+          if(Array.isArray(p) && p.length===STEPS) tracks[i].pattern = p.map(Boolean);
+        }
+      }
+      saveStateEl.textContent='Loaded ✓';
+    }catch(_){}
+  }
+
+  function buildHeader(){
+    headerRow.innerHTML='';
+    const left=document.createElement('div');
+    left.className='headerCell';
+    left.textContent='Sounds';
+    headerRow.appendChild(left);
+    for(let s=0;s<STEPS;s++){
+      const d=document.createElement('div');
+      d.className='headerCell';
+      d.textContent = (s%4===0)? String((s/4)+1) : '';
+      headerRow.appendChild(d);
+    }
+  }
+
+  function buildBarLines(){
+    barLines.innerHTML='';
+    const blank=document.createElement('div');
+    blank.style.height='0';
+    barLines.appendChild(blank);
+    for(let s=0;s<STEPS;s++){
+      const d=document.createElement('div');
+      d.className = (s%4===0)? 'bar' : '';
+      barLines.appendChild(d);
+    }
+  }
+
+  function updateVolUI(){
+    const v=clamp(parseFloat(volEl.value||0.9),0,1);
+    volLabel.textContent = Math.round(v*100)+'%';
+    if(master) master.gain.value=v;
+  }
+
+  function playBufferAt(buf, time){
+    if(!ctx || !master || !buf) return;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(master);
+
+    activeSources.add(src);
+    src.onended = () => activeSources.delete(src);
+
+    try{ src.start(time); }catch(_){}
+    return src;
+  }
+
+  async function fetchArrayBuffer(url){
+    const r = await fetch(url, { cache: 'no-store' });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return await r.arrayBuffer();
+  }
+
+  async function loadOneTrack(tr){
+    tr.buffer = null;
+    tr.fileLabel = 'Missing file';
+    for(const ext of EXT_TRY){
+      const url = SAMPLE_BASE + tr.key + '.' + ext;
+      try{
+        const arr = await fetchArrayBuffer(url);
+        const buf = await new Promise((resolve,reject)=>ctx.decodeAudioData(arr, resolve, reject));
+        tr.buffer = buf;
+        tr.fileLabel = tr.key + '.' + ext;
+        return true;
+      }catch(_){
+        // try next ext
+      }
+    }
+    return false;
+  }
+
+  async function loadAllSounds(){
+    await resumeAudio();
+    setStatus('Loading sounds…');
+    renderGrid();
+
+    let ok=0;
+    for(const tr of tracks){
+      const loaded = await loadOneTrack(tr);
+      if(loaded) ok++;
+      renderGrid();
+    }
+
+    setStatus(ok ? `Ready (${ok}/5).` : 'No sounds loaded (check /samples filenames).');
+    renderGrid();
+  }
+
+  function scheduleStep(stepIndex, time){
+    for(const tr of tracks){
+      if(tr.buffer && tr.pattern[stepIndex]) playBufferAt(tr.buffer, time);
+    }
+  }
+
+  function scheduler(){
+    const base = stepSec();
+    while(nextNoteTime < ctx.currentTime + SCHEDULE_AHEAD_SEC){
+      scheduleStep(step, nextNoteTime);
+      step = (step + 1) % STEPS;
+      nextNoteTime += base;
+    }
+    if(isPlaying) schedulerTimer = setTimeout(scheduler, LOOKAHEAD_MS);
+  }
+
+  function updatePlayheadUI(){
+    if(!isPlaying) return;
+
+    const base = stepSec();
+    const elapsed = ctx.currentTime - startTime;
+    const idx = ((elapsed / base) % STEPS + STEPS) % STEPS;
+    const newStep = Math.floor(idx);
+
+    if(newStep !== playStep){
+      playStep = newStep;
+      renderGrid();
+    }
+    rafId = requestAnimationFrame(updatePlayheadUI);
+  }
+
+  function hardStopAllSources(){
+    for(const src of Array.from(activeSources)){
+      try{ src.stop(0); }catch(_){}
+      activeSources.delete(src);
+    }
+  }
+
+  function stop(){
+    if(schedulerTimer) clearTimeout(schedulerTimer);
+    schedulerTimer=null;
+
+    if(rafId) cancelAnimationFrame(rafId);
+    rafId=null;
+
+    hardStopAllSources();
+
+    isPlaying=false;
+    step=0;
+    playStep=0;
+
+    renderGrid();
+    
+  }
+
+  async function play(){
+    await resumeAudio();
+    if(!anyLoaded()){
+      setStatus('Sounds not loaded (check /samples).');
+      return;
+    }
+
+    isPlaying=true;
+    step=0;
+    playStep=0;
+
+    startTime = ctx.currentTime + 0.03;
+    nextNoteTime = startTime;
+
+    setStatus('');
+    renderGrid();
+
+    if(rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(updatePlayheadUI);
+
+    scheduler();
+  }
+
+  function renderGrid(){
+    gridEl.innerHTML='';
+    tracks.forEach((tr)=>{
+      const row=document.createElement('div');
+      row.className='row';
+
+      const trackCell=document.createElement('div');
+      trackCell.className='trackCell';
+
+      const left=document.createElement('div');
+      left.className='trackLeft';
+
+      const sw=document.createElement('div');
+      sw.className='swatch';
+      sw.style.background = cssColorForClass(tr.colorClass);
+      left.appendChild(sw);
+
+      const text=document.createElement('div');
+      text.className='trackText';
+
+      const name=document.createElement('div');
+      name.className='trackName';
+      name.textContent = tr.name + (tr.buffer ? '' : ' ⚠');
+
+      const file=document.createElement('div');
+      file.className='fileLabel';
+      file.textContent = tr.fileLabel;
+
+      text.appendChild(name);
+      text.appendChild(file);
+      left.appendChild(text);
+
+      trackCell.appendChild(left);
+
+      const mini=document.createElement('div');
+      mini.className='mini';
+      const prev=document.createElement('button');
+      prev.textContent='▶';
+      prev.disabled = !tr.buffer;
+      prev.addEventListener('click', async ()=>{
+        await resumeAudio();
+        if(tr.buffer) playBufferAt(tr.buffer, ctx.currentTime);
+      });
+      mini.appendChild(prev);
+      trackCell.appendChild(mini);
+
+      row.appendChild(trackCell);
+
+      for(let s=0;s<STEPS;s++){
+        // ✅ CHANGE: "gekleurde vakjes" (alt background) start on the 1
+        // (s starts at 0, so we offset by +1)
+        const cell=document.createElement('div');
+        cell.className = 'cell' + ((((s + 1) % 2) ? ' alt' : ''));
+
+        if(tr.pattern[s]) cell.classList.add('on', tr.colorClass);
+        if(isPlaying && s===playStep) cell.classList.add('playhead');
+
+        cell.addEventListener('click', async ()=>{
+          tr.pattern[s]=!tr.pattern[s];
+          await resumeAudio();
+          if(tr.pattern[s] && tr.buffer) playBufferAt(tr.buffer, ctx.currentTime);
+          renderGrid();
+          markDirty();
+        });
+
+        row.appendChild(cell);
+      }
+
+      gridEl.appendChild(row);
+    });
+
+    playBtn.disabled = !anyLoaded() || isPlaying;
+    stopBtn.disabled = !isPlaying;
+  }
+
+  // Wire UI
+  playBtn.addEventListener('click', play);
+  stopBtn.addEventListener('click', stop);
+
+  clearBtn.addEventListener('click', ()=>{
+    for(const tr of tracks) tr.pattern.fill(false);
+    renderGrid();
+    setStatus('');
+    markDirty();
+  });
+
+  reloadBtn.addEventListener('click', async ()=>{
+    if(isPlaying) stop();
+    await loadAllSounds();
+  });
+
+  bpmEl.addEventListener('input', markDirty);
+  bpmEl.addEventListener('change', ()=>{
+    if(isPlaying){ stop(); play(); }
+  });
+
+  volEl.addEventListener('input', ()=>{
+    updateVolUI();
+    markDirty();
+  });
+
+  window.addEventListener('keydown', (e)=>{
+    if(e.code==='Space'){
+      e.preventDefault();
+      if(isPlaying) stop(); else play();
+    }
+  });
+
+  // Init
+  buildHeader();
+  buildBarLines();
+  updateVolUI();
+  loadSaved();
+  setStatus('Loading sounds…');
+  renderGrid();
+  loadAllSounds();
+})();
+</script>
+</body>
+</html>
